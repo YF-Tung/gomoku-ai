@@ -126,7 +126,11 @@
         .cell {
             width: 40px;
             height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
+            box-sizing: border-box;
             cursor: pointer;
         }
         
@@ -139,6 +143,7 @@
             background-color: #000;
             top: 50%;
             left: 0;
+            z-index: 0;
         }
         
         .cell::after {
@@ -149,11 +154,22 @@
             background-color: #000;
             left: 50%;
             top: 0;
+            z-index: 0;
         }
         
-        /* Remove border from cells */
-        .cell {
-            border: none;
+        /* Last move marker */
+        .last-move-marker {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #ffcc00;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-shadow: 0 0 4px rgba(255, 204, 0, 0.5);
+            pointer-events: none;  /* Make sure it doesn't interfere with clicks */
         }
         
         /* Adjust piece positioning */
@@ -165,7 +181,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 1;
+            z-index: 2;
         }
         
         .piece.black {
@@ -298,25 +314,6 @@
             width: 2px;
             background: #666;
             transform: translateX(-50%);
-        }
-        
-        /* Last move highlight */
-        .cell.last-move {
-            background-color: rgba(255, 255, 0, 0.1);
-        }
-        
-        .cell.last-move::after {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background-color: #ffd700;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            box-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
         }
     </style>
 </head>

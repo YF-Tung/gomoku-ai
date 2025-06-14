@@ -49,11 +49,22 @@ function updateTimeDisplay() {
 }
 
 function updateLastMove(moveInfo) {
+    console.log('updateLastMove called with:', moveInfo);
     const lastMoveElement = document.getElementById('lastMove');
+    if (!lastMoveElement) {
+        console.error('lastMove element not found in DOM');
+        return;
+    }
     if (moveInfo) {
-        lastMoveElement.textContent = `Last move: ${moveInfo}`;
+        const [row, col] = moveInfo;
+        // Convert to human-readable coordinates (1-based)
+        const humanRow = row + 1;
+        const humanCol = col + 1;
+        lastMoveElement.textContent = `Last move: (${humanRow}, ${humanCol})`;
+        console.log('Updated last move text to:', lastMoveElement.textContent);
     } else {
         lastMoveElement.textContent = '';
+        console.log('Cleared last move text');
     }
 }
 
@@ -139,10 +150,13 @@ function makeMove(row, col) {
 }
 
 function updateBoard(data) {
-    console.log('Received data in updateBoard:', data);  // Debug log
+    console.log('updateBoard called with data:', data);
     
     // Remove last-move class from all cells
-    document.querySelectorAll('.cell.last-move').forEach(cell => {
+    const cellsWithLastMove = document.querySelectorAll('.cell.last-move');
+    console.log('Found cells with last-move class:', cellsWithLastMove.length);
+    cellsWithLastMove.forEach(cell => {
+        console.log('Removing last-move class from cell:', cell.dataset.row, cell.dataset.col);
         cell.classList.remove('last-move');
     });
     
@@ -183,11 +197,24 @@ function updateBoard(data) {
     
     // Highlight last move if available
     if (data.last_move) {
+        console.log('Processing last move:', data.last_move);
         const [row, col] = data.last_move;
         const lastMoveCell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
         if (lastMoveCell) {
-            lastMoveCell.classList.add('last-move');
+            console.log('Found cell for last move, adding marker');
+            // Remove any existing markers
+            document.querySelectorAll('.last-move-marker').forEach(m => m.remove());
+            // Add new marker
+            const marker = document.createElement('div');
+            marker.className = 'last-move-marker';
+            lastMoveCell.appendChild(marker);
+        } else {
+            console.error('Could not find cell for last move at:', row, col);
         }
+    } else {
+        console.log('No last move data available');
+        // Remove any existing markers
+        document.querySelectorAll('.last-move-marker').forEach(m => m.remove());
     }
     
     // Update status
