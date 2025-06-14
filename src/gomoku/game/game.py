@@ -62,7 +62,8 @@ class Game:
         
         # AI makes move
         ai_row, ai_col = self.ai.make_move()
-        self.board.make_move(ai_row, ai_col)
+        if not self.board.make_move(ai_row, ai_col):
+            return False, "AI made an invalid move"
         
         # Update time for white player
         self.get_time_remaining(PlayerType.WHITE)
