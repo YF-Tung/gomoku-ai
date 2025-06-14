@@ -75,6 +75,9 @@
             margin: 10px 0;
             font-size: 1.1em;
             color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .time-control {
             display: flex;
@@ -95,12 +98,11 @@
         }
         .thinking {
             display: none;
-            margin: 10px 0;
             color: #666;
             font-style: italic;
         }
         .thinking.active {
-            display: block;
+            display: inline;
             animation: blink 1s infinite;
         }
         @keyframes blink {
@@ -115,8 +117,10 @@
         <div id="whiteTime" class="player-time">White: 5:00</div>
     </div>
     <div class="status" id="status">Your turn (Black)</div>
-    <div class="thinking" id="thinking">AI is thinking...</div>
-    <div class="last-move" id="lastMove"></div>
+    <div class="last-move">
+        <span id="lastMove"></span>
+        <span class="thinking" id="thinking">AI is thinking...</span>
+    </div>
     <div class="board" id="board">
         {% for row_idx in range(board|length) %}
         <div class="row">
