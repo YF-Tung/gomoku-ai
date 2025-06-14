@@ -3,15 +3,105 @@
 <head>
     <title>Gomoku Game</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .game-info {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .time-control {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .player-time {
+            flex: 1;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .player-time.active {
+            background-color: #d4edda;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.2);
+        }
+        
+        .player-time.low {
+            color: #dc3545;
+            animation: pulse 1s infinite;
+        }
+        
+        .player-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .time-display {
+            font-family: monospace;
+            font-size: 1.2em;
+        }
+        
+        .status {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: #333;
+        }
+        
+        .last-move {
+            font-family: monospace;
+            color: #666;
+            margin: 10px 0;
+        }
+        
+        .ai-score {
+            font-family: monospace;
+            font-size: 1.2em;
+            color: #666;
+            margin: 10px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .thinking {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .thinking.active {
+            display: inline;
+            animation: pulse 1s infinite;
+        }
+        
         .board {
             display: inline-block;
             background-color: #DEB887;
             padding: 20px;
             border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
+        
         .row {
             display: flex;
         }
+        
         .cell {
             width: 40px;
             height: 40px;
@@ -22,125 +112,67 @@
             cursor: pointer;
             position: relative;
         }
+        
         .cell:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255,255,255,0.1);
         }
-        .cell::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 1px;
-            background-color: #000;
-            top: 50%;
-        }
-        .cell::after {
-            content: '';
-            position: absolute;
-            width: 1px;
-            height: 100%;
-            background-color: #000;
-            left: 50%;
-        }
+        
         .piece {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            z-index: 1;
+            position: absolute;
         }
+        
         .black {
             background-color: #000;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
+        
         .white {
             background-color: #fff;
-            border: 1px solid #000;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
         }
-        .status {
-            margin: 20px 0;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
+        
         .restart-btn {
+            display: block;
+            margin: 20px auto;
             padding: 10px 20px;
             font-size: 1.1em;
-            background-color: #4CAF50;
+            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
+        
         .restart-btn:hover {
-            background-color: #45a049;
+            background-color: #0056b3;
         }
-        .last-move {
-            margin: 10px 0;
-            font-size: 1.1em;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .time-control {
-            display: flex;
-            justify-content: space-between;
-            margin: 20px 0;
-            font-size: 1.2em;
-            gap: 20px;
-        }
-        .player-time {
-            flex: 1;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f0f0f0;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: background-color 0.3s ease;
-        }
-        .player-time.active {
-            background-color: #d4edda;  /* Slightly more noticeable light green */
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);  /* Stronger green shadow */
-        }
-        .player-time.low {
-            color: red;
-        }
-        .player-label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .time-display {
-            font-family: monospace;
-            font-size: 1.2em;
-        }
-        .thinking {
-            display: none;
-            color: #666;
-            font-style: italic;
-        }
-        .thinking.active {
-            display: inline;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
             50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
     <h1>Gomoku Game</h1>
-    <div class="time-control">
-        <div id="blackTime" class="player-time active">
-            <div class="player-label">Your Time (Black)</div>
-            <div class="time-display">5:00</div>
+    <div class="game-info">
+        <div class="time-control">
+            <div id="blackTime" class="player-time active">
+                <div class="player-label">Your Time (Black)</div>
+                <div class="time-display">5:00</div>
+            </div>
+            <div id="whiteTime" class="player-time">
+                <div class="player-label">AI Time (White)</div>
+                <div class="time-display">5:00</div>
+            </div>
         </div>
-        <div id="whiteTime" class="player-time">
-            <div class="player-label">AI Time (White)</div>
-            <div class="time-display">5:00</div>
-        </div>
-    </div>
-    <div class="status" id="status">Your turn (Black)</div>
-    <div class="last-move">
-        <span id="lastMove"></span>
+        <div class="status" id="status">Your turn (Black)</div>
+        <div class="last-move" id="lastMove"></div>
+        <div class="ai-score" id="aiScore"></div>
         <span class="thinking" id="thinking">AI is thinking...</span>
     </div>
     <div class="board" id="board">
@@ -160,198 +192,6 @@
     </div>
     <button class="restart-btn" onclick="restartGame()">New Game</button>
 
-    <script>
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }
-
-        function updateTimeDisplay() {
-            fetch('/game_state')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Game state:', data);  // Debug log
-                    const blackTime = document.getElementById('blackTime');
-                    const whiteTime = document.getElementById('whiteTime');
-                    const blackDisplay = blackTime.querySelector('.time-display');
-                    const whiteDisplay = whiteTime.querySelector('.time-display');
-                    
-                    blackDisplay.textContent = formatTime(data.time_remaining.black);
-                    whiteDisplay.textContent = formatTime(data.time_remaining.white);
-                    
-                    // Debug log current classes
-                    console.log('Before update - Black active:', blackTime.classList.contains('active'));
-                    console.log('Before update - White active:', whiteTime.classList.contains('active'));
-                    
-                    // Update active player - remove both classes first, then add to current
-                    blackTime.classList.remove('active');
-                    whiteTime.classList.remove('active');
-                    if (data.current_player === 1) {  // 1 = BLACK
-                        blackTime.classList.add('active');
-                    } else if (data.current_player === 2) {  // 2 = WHITE
-                        whiteTime.classList.add('active');
-                    }
-                    
-                    // Debug log after update
-                    console.log('After update - Black active:', blackTime.classList.contains('active'));
-                    console.log('After update - White active:', whiteTime.classList.contains('active'));
-                    
-                    // Add low time warning
-                    blackTime.classList.toggle('low', data.time_remaining.black < 30);
-                    whiteTime.classList.toggle('low', data.time_remaining.white < 30);
-
-                    // Update last move display
-                    if (data.last_move) {
-                        updateLastMove(data.last_move);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error updating time:', error);
-                });
-        }
-
-        function updateLastMove(moveInfo) {
-            const lastMoveElement = document.getElementById('lastMove');
-            if (moveInfo) {
-                lastMoveElement.textContent = `Last move: ${moveInfo}`;
-            } else {
-                lastMoveElement.textContent = '';
-            }
-        }
-
-        // Update time every second
-        setInterval(updateTimeDisplay, 1000);
-
-        function makeMove(row, col) {
-            // Optimistic UI: Update the board immediately with player's move
-            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-            const originalContent = cell.innerHTML;  // Save original state
-            cell.innerHTML = '<div class="piece black"></div>';
-            
-            // Disable all cells while AI is thinking
-            document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'none');
-            
-            // Show thinking indicator
-            const thinking = document.getElementById('thinking');
-            thinking.classList.add('active');
-            
-            fetch('/make_move', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({row: row, col: col})
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    // Revert the optimistic update
-                    cell.innerHTML = originalContent;
-                    alert(data.error);
-                    // Re-enable cells
-                    document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
-                    return;
-                }
-                
-                // Server confirmed the move, update with both moves
-                updateBoard(data.board);
-                updateStatus(data);
-                if (data.last_move) {
-                    updateLastMove(data.last_move);
-                }
-                if (data.game_over) {
-                    setTimeout(() => {
-                        alert(data.winner === 'B' ? 'You won!' : 'AI won!');
-                    }, 100);
-                }
-                
-                // Re-enable cells if game is not over
-                if (!data.game_over) {
-                    document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Revert the optimistic update
-                cell.innerHTML = originalContent;
-                alert('Error making move. Please try again.');
-                // Re-enable cells
-                document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
-            })
-            .finally(() => {
-                // Hide thinking indicator
-                thinking.classList.remove('active');
-            });
-        }
-
-        function updateBoard(board) {
-            const rows = document.querySelectorAll('.row');
-            rows.forEach((row, rowIndex) => {
-                const cells = row.querySelectorAll('.cell');
-                cells.forEach((cell, colIndex) => {
-                    const value = board[rowIndex][colIndex];
-                    
-                    // Clear existing pieces
-                    const existingPiece = cell.querySelector('.piece');
-                    if (existingPiece) {
-                        existingPiece.remove();
-                    }
-                    
-                    // Add new piece if needed
-                    if (value === 1) {
-                        const piece = document.createElement('div');
-                        piece.className = 'piece black';
-                        cell.appendChild(piece);
-                    } else if (value === 2) {
-                        const piece = document.createElement('div');
-                        piece.className = 'piece white';
-                        cell.appendChild(piece);
-                    }
-                });
-            });
-        }
-
-        function updateStatus(data) {
-            const status = document.getElementById('status');
-            if (data.game_over) {
-                status.textContent = data.winner === 'B' ? 'Game Over - You won!' : 'Game Over - AI won!';
-            } else {
-                status.textContent = data.current_player === 'B' ? 'Your turn (Black)' : 'AI is thinking...';
-            }
-        }
-
-        function restartGame() {
-            fetch('/restart', {method: 'POST'})
-                .then(response => response.json())
-                .then(data => {
-                    updateBoard(data.board);
-                    updateStatus(data);
-                    document.getElementById('lastMove').textContent = '';
-                })
-                .catch(error => {
-                    console.error('Error restarting game:', error);
-                    alert('Error restarting game. Please refresh the page.');
-                });
-        }
-
-        // Add click handlers to cells
-        document.querySelectorAll('.cell').forEach(cell => {
-            cell.addEventListener('click', () => {
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-                console.log(`Cell clicked: (${row}, ${col})`);  // Debug log
-                makeMove(row, col);
-            });
-        });
-
-        // Initial status update
-        updateTimeDisplay();
-    </script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>
 </html> 

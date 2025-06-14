@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, make_response, url_for
 from src.gomoku.game.game import Game
 import webbrowser
 import threading
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 game = Game(ai_depth=3, time_limit=300)  # 5 minutes per player
 
 @app.route('/')
@@ -43,7 +43,8 @@ def make_move():
             'black': game.get_time_remaining(game.human_player.type),
             'white': game.get_time_remaining(game.ai_player.type)
         },
-        'last_move': last_move
+        'last_move': last_move,
+        'ai_score': game.ai.last_score if hasattr(game.ai, 'last_score') else None
     })
 
 @app.route('/game_state')
