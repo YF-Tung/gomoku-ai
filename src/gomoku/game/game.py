@@ -4,6 +4,7 @@ from ..board.board import Board
 from ..board.player import Player, PlayerType
 from ..ai.player import AIPlayer
 from ..utils.formatter import BoardFormatter
+from .time_manager import TimeManager
 
 class Game:
     def __init__(self, ai_depth: int = 3, time_limit: int = 300):  # 300 seconds = 5 minutes
@@ -14,24 +15,14 @@ class Game:
         self.current_player = self.human_player
         self.game_over = False
         self.winner = None
-        self.time_limit = time_limit
-        self.time_remaining = {
-            PlayerType.BLACK: time_limit,
-            PlayerType.WHITE: time_limit
-        }
-        self.last_move_time = time.time()
+        self.time_manager = TimeManager(time_limit)
         self.formatter = BoardFormatter(self.board)
     
     def get_time_remaining(self, player_type: PlayerType) -> int:
         """Get remaining time for a player in seconds."""
         if self.game_over:
-            return self.time_remaining[player_type]
-            
-        current_time = time.time()
-        elapsed = current_time - self.last_move_time
-        self.time_remaining[player_type] = max(0, self.time_remaining[player_type] - int(elapsed))
-        self.last_move_time = current_time
-        return self.time_remaining[player_type]
+            return self.time_manager.time_remaining[player_type]
+        return self.time_manager.get_time_remaining(player_type)
     
     def make_move(self, row: int, col: int) -> Tuple[bool, Optional[str]]:
         """Make a move and return (success, error_message)."""
@@ -86,10 +77,7 @@ class Game:
             'current_player': self.current_player.type.value,
             'game_over': self.game_over,
             'winner': self.winner.type.value if self.winner else None,
-            'time_remaining': {
-                'black': self.get_time_remaining(PlayerType.BLACK),
-                'white': self.get_time_remaining(PlayerType.WHITE)
-            }
+            'time_remaining': self.time_manager.get_time_state()
         }
     
     def play(self):
