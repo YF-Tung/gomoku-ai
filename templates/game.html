@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gomoku Game</title>
+    <style>
+        .board {
+            display: inline-block;
+            background-color: #DEB887;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .row {
+            display: flex;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .cell:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .cell::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background-color: #000;
+            top: 50%;
+        }
+        .cell::after {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            background-color: #000;
+            left: 50%;
+        }
+        .piece {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .black {
+            background-color: #000;
+        }
+        .white {
+            background-color: #fff;
+            border: 1px solid #000;
+        }
+        .status {
+            margin: 20px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .restart-btn {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .restart-btn:hover {
+            background-color: #45a049;
+        }
+        .last-move {
+            margin: 10px 0;
+            font-size: 1.1em;
+            color: #666;
+        }
+        .time-control {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        .player-time {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+        .player-time.active {
+            background-color: #e0e0ff;
+        }
+        .player-time.low {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gomoku Game</h1>
+    <div class="time-control">
+        <div id="blackTime" class="player-time active">Black: 5:00</div>
+        <div id="whiteTime" class="player-time">White: 5:00</div>
+    </div>
+    <div class="status" id="status">Your turn (Black)</div>
+    <div class="last-move" id="lastMove"></div>
+    <div class="board" id="board">
+        {% for row_idx in range(board|length) %}
+        <div class="row">
+            {% for col_idx in range(board[row_idx]|length) %}
+            <div class="cell" data-row="{{ row_idx }}" data-col="{{ col_idx }}">
+                {% if board[row_idx][col_idx] == 1 %}
+                <div class="piece black"></div>
+                {% elif board[row_idx][col_idx] == 2 %}
+                <div class="piece white"></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    <button class="restart-btn" onclick="restartGame()">New Game</button>
+
+    <script>
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimeDisplay() {
+            fetch('/game_state')
+                .then(response => response.json())
+                .then(data => {
+                    const blackTime = document.getElementById('blackTime');
+                    const whiteTime = document.getElementById('whiteTime');
+                    
+                    blackTime.textContent = `Black: ${formatTime(data.time_remaining.black)}`;
+                    whiteTime.textContent = `White: ${formatTime(data.time_remaining.white)}`;
+                    
+                    // Update active player
+                    blackTime.classList.toggle('active', data.current_player === 'B');
+                    whiteTime.classList.toggle('active', data.current_player === 'W');
+                    
+                    // Add low time warning
+                    blackTime.classList.toggle('low', data.time_remaining.black < 30);
+                    whiteTime.classList.toggle('low', data.time_remaining.white < 30);
+                });
+        }
+
+        // Update time every second
+        setInterval(updateTimeDisplay, 1000);
+
+        function makeMove(row, col) {
+            console.log(`Making move at (${row}, ${col})`);  // Debug log
+            fetch('/make_move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({row: row, col: col})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                updateBoard(data.board);
+                updateStatus(data);
+                if (data.last_move) {
+                    updateLastMove(data.last_move);
+                }
+                if (data.game_over) {
+                    setTimeout(() => {
+                        alert(data.winner === 'B' ? 'You won!' : 'AI won!');
+                    }, 100);
+                }
+            });
+        }
+
+        function updateBoard(board) {
+            const rows = document.querySelectorAll('.row');
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll('.cell');
+                cells.forEach((cell, colIndex) => {
+                    const value = board[rowIndex][colIndex];
+                    
+                    // Clear existing pieces
+                    const existingPiece = cell.querySelector('.piece');
+                    if (existingPiece) {
+                        existingPiece.remove();
+                    }
+                    
+                    // Add new piece if needed
+                    if (value === 1) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece black';
+                        cell.appendChild(piece);
+                    } else if (value === 2) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece white';
+                        cell.appendChild(piece);
+                    }
+                });
+            });
+        }
+
+        function updateStatus(data) {
+            const status = document.getElementById('status');
+            if (data.game_over) {
+                status.textContent = data.winner === 'B' ? 'Game Over - You won!' : 'Game Over - AI won!';
+            } else {
+                status.textContent = data.current_player === 'B' ? 'Your turn (Black)' : 'AI is thinking...';
+            }
+        }
+
+        function updateLastMove(move) {
+            const player = move.player === 'black' ? 'Black' : 'White';
+            document.getElementById('lastMove').textContent = 
+                `Last move: ${player} at (${move.row}, ${move.col})`;
+        }
+
+        function restartGame() {
+            fetch('/restart', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateBoard(data.board);
+                updateStatus(data);
+                document.getElementById('lastMove').textContent = '';
+            });
+        }
+
+        // Add click handlers to cells
+        document.querySelectorAll('.cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                console.log(`Cell clicked: (${row}, ${col})`);  // Debug log
+                makeMove(row, col);
+            });
+        });
+
+        // Initial status update
+        updateTimeDisplay();
+    </script>
+</body>
+</html> 

@@ -1,4 +1,5 @@
 from typing import Tuple
+import time
 from ..board.board import Board
 from ..board.player import Player, PlayerType
 from .evaluator import PositionEvaluator
@@ -6,33 +7,72 @@ from .search import MinimaxSearch
 from .progress import ProgressTracker
 
 class AIPlayer:
-    def __init__(self, board: Board, depth: int = 3):
+    def __init__(self, board: Board, depth: int = 3, time_limit: float = 10.0):
         self.board = board
         self.depth = depth
+        self.time_limit = time_limit  # Time limit in seconds
         self.player = Player(PlayerType.WHITE)  # AI is always white
         self.evaluator = PositionEvaluator(board)
         self.progress = ProgressTracker()
+        self.first_move_made = False
+    
+    def _get_first_move(self) -> Tuple[int, int]:
+        """Get the optimal first move for white."""
+        last_row, last_col, _ = self.board.move_history[-1]
+        adjacent_moves = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        
+        for dr, dc in adjacent_moves:
+            new_row, new_col = last_row + dr, last_col + dc
+            if self.board.is_valid_move(new_row, new_col):
+                return new_row, new_col
+        return 7, 7  # Fallback to center
+    
+    def _search_with_time_limit(self, start_depth: int = 2) -> Tuple[float, Tuple[int, int]]:
+        """Perform iterative deepening search with time limit."""
+        best_score = float('-inf')
+        best_move = None
+        current_depth = start_depth
+        start_time = time.time()
+        
+        while time.time() - start_time < self.time_limit:
+            search = MinimaxSearch(
+                self.board,
+                lambda: self.evaluator.evaluate(),
+                current_depth
+            )
+            
+            # Override the evaluator to track progress
+            def evaluator_with_progress():
+                self.progress.increment_nodes()
+                return self.evaluator.evaluate()
+            
+            search.evaluator = evaluator_with_progress
+            
+            try:
+                score, move = search.search()
+                if move:  # Only update if we found a valid move
+                    best_score = score
+                    best_move = move
+                    print(f"Depth {current_depth} completed. Best score: {best_score}, Move: {best_move}")
+            except TimeoutError:
+                print(f"Timeout at depth {current_depth}")
+                break
+                
+            current_depth += 1
+            
+        return best_score, best_move
     
     def make_move(self) -> Tuple[int, int]:
-        """Make the best move using minimax algorithm."""
+        """Make the best move using iterative deepening with time limit."""
+        if not self.first_move_made and len(self.board.move_history) == 1:
+            self.first_move_made = True
+            return self._get_first_move()
+            
         valid_moves = self.board.get_valid_moves()
         self.progress.start(len(valid_moves))
         
-        search = MinimaxSearch(
-            self.board,
-            lambda: self.evaluator.evaluate(),
-            self.depth
-        )
-        
-        # Override the evaluator to track progress
-        def evaluator_with_progress():
-            self.progress.increment_nodes()
-            return self.evaluator.evaluate()
-        
-        search.evaluator = evaluator_with_progress
-        
-        # Perform the search
-        score, best_move = search.search()
+        # Start with depth 2 for faster initial response
+        score, best_move = self._search_with_time_limit(start_depth=2)
         
         # Print final result
         print(self.progress.finish(best_move))
