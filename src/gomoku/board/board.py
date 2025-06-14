@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple, Optional
 from .player import Player, PlayerType
+from .win_checker import WinChecker
 
 class Board:
     def __init__(self, size: int = 15):
@@ -12,6 +13,7 @@ class Board:
         self.hex_map = {str(i): i-1 for i in range(1, 10)}  # 1-9
         self.hex_map.update({c: i+9 for i, c in enumerate('abcdef')})  # a-f
         self.reverse_hex_map = {v: k for k, v in self.hex_map.items()}
+        self.win_checker = WinChecker(size)
     
     def parse_coordinate(self, coord: str) -> int:
         """Convert hex coordinate to 0-based index."""
@@ -52,36 +54,7 @@ class Board:
         player = self.get_piece_at(row, col)
         if not player:
             return False
-            
-        directions = [(1,0), (0,1), (1,1), (1,-1)]  # horizontal, vertical, diagonal
-        
-        for dr, dc in directions:
-            count = 1
-            # Check forward direction
-            for i in range(1, 5):
-                r, c = row + dr*i, col + dc*i
-                if 0 <= r < self.size and 0 <= c < self.size:
-                    piece = self.get_piece_at(r, c)
-                    if piece and piece == player:
-                        count += 1
-                    else:
-                        break
-                else:
-                    break
-            # Check backward direction
-            for i in range(1, 5):
-                r, c = row - dr*i, col - dc*i
-                if 0 <= r < self.size and 0 <= c < self.size:
-                    piece = self.get_piece_at(r, c)
-                    if piece and piece == player:
-                        count += 1
-                    else:
-                        break
-                else:
-                    break
-            if count >= 5:
-                return True
-        return False
+        return self.win_checker.check_win(self.board.tolist(), row, col, player.type.value)
     
     def get_valid_moves(self) -> list[Tuple[int, int]]:
         """Get all valid moves on the board."""
