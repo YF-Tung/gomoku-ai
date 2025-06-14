@@ -93,6 +93,19 @@
         .player-time.low {
             color: red;
         }
+        .thinking {
+            display: none;
+            margin: 10px 0;
+            color: #666;
+            font-style: italic;
+        }
+        .thinking.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
@@ -102,6 +115,7 @@
         <div id="whiteTime" class="player-time">White: 5:00</div>
     </div>
     <div class="status" id="status">Your turn (Black)</div>
+    <div class="thinking" id="thinking">AI is thinking...</div>
     <div class="last-move" id="lastMove"></div>
     <div class="board" id="board">
         {% for row_idx in range(board|length) %}
@@ -144,6 +158,9 @@
                     // Add low time warning
                     blackTime.classList.toggle('low', data.time_remaining.black < 30);
                     whiteTime.classList.toggle('low', data.time_remaining.white < 30);
+                })
+                .catch(error => {
+                    console.error('Error updating time:', error);
                 });
         }
 
@@ -151,7 +168,18 @@
         setInterval(updateTimeDisplay, 1000);
 
         function makeMove(row, col) {
-            console.log(`Making move at (${row}, ${col})`);  // Debug log
+            // Optimistic UI: Update the board immediately with player's move
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            const originalContent = cell.innerHTML;  // Save original state
+            cell.innerHTML = '<div class="piece black"></div>';
+            
+            // Disable all cells while AI is thinking
+            document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'none');
+            
+            // Show thinking indicator
+            const thinking = document.getElementById('thinking');
+            thinking.classList.add('active');
+            
             fetch('/make_move', {
                 method: 'POST',
                 headers: {
@@ -159,12 +187,23 @@
                 },
                 body: JSON.stringify({row: row, col: col})
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
+                    // Revert the optimistic update
+                    cell.innerHTML = originalContent;
                     alert(data.error);
+                    // Re-enable cells
+                    document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
                     return;
                 }
+                
+                // Server confirmed the move, update with both moves
                 updateBoard(data.board);
                 updateStatus(data);
                 if (data.last_move) {
@@ -175,6 +214,23 @@
                         alert(data.winner === 'B' ? 'You won!' : 'AI won!');
                     }, 100);
                 }
+                
+                // Re-enable cells if game is not over
+                if (!data.game_over) {
+                    document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert the optimistic update
+                cell.innerHTML = originalContent;
+                alert('Error making move. Please try again.');
+                // Re-enable cells
+                document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
+            })
+            .finally(() => {
+                // Hide thinking indicator
+                thinking.classList.remove('active');
             });
         }
 
@@ -221,15 +277,17 @@
         }
 
         function restartGame() {
-            fetch('/restart', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                updateBoard(data.board);
-                updateStatus(data);
-                document.getElementById('lastMove').textContent = '';
-            });
+            fetch('/restart', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    updateBoard(data.board);
+                    updateStatus(data);
+                    document.getElementById('lastMove').textContent = '';
+                })
+                .catch(error => {
+                    console.error('Error restarting game:', error);
+                    alert('Error restarting game. Please refresh the page.');
+                });
         }
 
         // Add click handlers to cells

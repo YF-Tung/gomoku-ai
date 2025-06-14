@@ -63,18 +63,28 @@ class AIPlayer:
         return best_score, best_move
     
     def make_move(self) -> Tuple[int, int]:
-        """Make the best move using iterative deepening with time limit."""
+        """Make the best move using minimax algorithm."""
+        print("\nAI is thinking...")
         if not self.first_move_made and len(self.board.move_history) == 1:
+            print("Making first move (adjacent to black)...")
             self.first_move_made = True
             return self._get_first_move()
             
         valid_moves = self.board.get_valid_moves()
+        print(f"Found {len(valid_moves)} valid moves to evaluate")
         self.progress.start(len(valid_moves))
         
         # Start with depth 2 for faster initial response
+        print("Starting search at depth 2...")
         score, best_move = self._search_with_time_limit(start_depth=2)
+        
+        if best_move:
+            print(f"AI chose move: {best_move} with score: {score}")
+        else:
+            print("WARNING: No best move found, using center as fallback")
+            best_move = (7, 7)
         
         # Print final result
         print(self.progress.finish(best_move))
         
-        return best_move or (7, 7)  # Default to center if no best move found 
+        return best_move 
