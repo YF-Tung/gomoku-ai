@@ -6,6 +6,7 @@ from ..ai.player import AIPlayer
 from ..utils.formatter import BoardFormatter
 from .time_manager import TimeManager
 
+
 class Game:
     def __init__(self, ai_depth: int = 3, time_limit: int = 300):  # 300 seconds = 5 minutes
         self.board = Board()
@@ -72,12 +73,19 @@ class Game:
     
     def get_game_state(self) -> dict:
         """Get current game state for web interface."""
+        # Get the last moves for display
+        last_move = None
+        if self.board.move_history:
+            last_row, last_col, player = self.board.move_history[-1]
+            last_move = f"{self.board.format_coordinate(last_row)}{self.board.format_coordinate(last_col)} ({player.type.value})"
+            
         return {
             'board': self.board.board.tolist(),  # Convert numpy array to list
             'current_player': self.current_player.type.value,
             'game_over': self.game_over,
             'winner': self.winner.type.value if self.winner else None,
-            'time_remaining': self.time_manager.get_time_state()
+            'time_remaining': self.time_manager.get_time_state(),
+            'last_move': last_move
         }
     
     def play(self):
