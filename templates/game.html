@@ -162,10 +162,24 @@
                     // Add low time warning
                     blackTime.classList.toggle('low', data.time_remaining.black < 30);
                     whiteTime.classList.toggle('low', data.time_remaining.white < 30);
+
+                    // Update last move display
+                    if (data.last_move) {
+                        updateLastMove(data.last_move);
+                    }
                 })
                 .catch(error => {
                     console.error('Error updating time:', error);
                 });
+        }
+
+        function updateLastMove(moveInfo) {
+            const lastMoveElement = document.getElementById('lastMove');
+            if (moveInfo) {
+                lastMoveElement.textContent = `Last move: ${moveInfo}`;
+            } else {
+                lastMoveElement.textContent = '';
+            }
         }
 
         // Update time every second
@@ -272,12 +286,6 @@
             } else {
                 status.textContent = data.current_player === 'B' ? 'Your turn (Black)' : 'AI is thinking...';
             }
-        }
-
-        function updateLastMove(move) {
-            const player = move.player === 'black' ? 'Black' : 'White';
-            document.getElementById('lastMove').textContent = 
-                `Last move: ${player} at (${move.row}, ${move.col})`;
         }
 
         function restartGame() {
