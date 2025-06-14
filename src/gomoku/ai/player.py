@@ -33,8 +33,12 @@ class AIPlayer:
         best_move = None
         current_depth = start_depth
         start_time = time.time()
+        max_depth = 3  # Cap the maximum search depth
         
-        while time.time() - start_time < self.time_limit:
+        print(f"\nStarting AI search at depth {current_depth}...")
+        
+        while time.time() - start_time < self.time_limit and current_depth <= max_depth:
+            print(f"\nTrying depth {current_depth}...")
             search = MinimaxSearch(
                 self.board,
                 lambda: self.evaluator.evaluate(),
@@ -53,12 +57,35 @@ class AIPlayer:
                 if move:  # Only update if we found a valid move
                     best_score = score
                     best_move = move
-                    print(f"Depth {current_depth} completed. Best score: {best_score}, Move: {best_move}")
+                    print(f"✓ Depth {current_depth} completed:")
+                    print(f"  - Best move: {move}")
+                    print(f"  - Score: {score}")
+                    print(f"  - Time used: {time.time() - start_time:.2f}s")
+                    
+                    if current_depth == max_depth:
+                        print(f"\nReached maximum depth {max_depth}, stopping search.")
+                        break
+                        
+                    # Check if we have time for next depth
+                    time_left = self.time_limit - (time.time() - start_time)
+                    if time_left < 2.0:  # Less than 2 seconds left
+                        print(f"\nNot enough time ({time_left:.2f}s) for depth {current_depth + 1}, stopping search.")
+                        break
+                    print(f"\nTime remaining: {time_left:.2f}s, attempting depth {current_depth + 1}...")
             except TimeoutError:
-                print(f"Timeout at depth {current_depth}")
+                print(f"× Timeout at depth {current_depth}")
                 break
                 
             current_depth += 1
+            
+        if best_move:
+            print(f"\nFinal decision:")
+            print(f"- Best move: {best_move}")
+            print(f"- Score: {best_score}")
+            print(f"- Search depth: {current_depth - 1}")
+            print(f"- Total time: {time.time() - start_time:.2f}s")
+        else:
+            print("\nWARNING: No valid move found!")
             
         return best_score, best_move
     
