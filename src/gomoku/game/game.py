@@ -36,8 +36,8 @@ class Game:
         if not self.board.is_valid_move(row, col):
             return False, "Invalid move"
             
-        # Update time for black player
-        self.get_time_remaining(PlayerType.BLACK)
+        # Switch to AI's turn and update time for human player
+        self.time_manager.switch_player(PlayerType.WHITE)
         
         # Make the move
         if not self.board.make_move(row, col):
@@ -57,8 +57,8 @@ class Game:
         if not self.board.make_move(ai_row, ai_col):
             return False, "AI made an invalid move"
         
-        # Update time for white player
-        self.get_time_remaining(PlayerType.WHITE)
+        # Switch back to human's turn and update time for AI
+        self.time_manager.switch_player(PlayerType.BLACK)
         
         # Check for AI win
         if self.board.check_win(ai_row, ai_col):
