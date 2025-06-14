@@ -38,13 +38,13 @@ def make_move():
     last_move = None
     if game.board.move_history:
         last_row, last_col, player = game.board.move_history[-1]
-        last_move = f"({game.board.format_coordinate(last_row)}, {game.board.format_coordinate(last_col)}) ({player.type.value})"
+        last_move = [last_row, last_col]  # Send as array for consistency
     
     return jsonify({
         'board': game.board.board.tolist(),
-        'current_player': game.current_player.value,
+        'current_player': game.current_player.type.value,
         'game_over': game.game_over,
-        'winner': game.winner.value if game.winner else None,
+        'winner': game.winner.type.value if game.winner else None,
         'time_remaining': {
             'black': game.get_time_remaining(game.human_player),
             'white': game.get_time_remaining(game.ai_player)

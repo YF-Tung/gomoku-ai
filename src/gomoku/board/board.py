@@ -23,14 +23,17 @@ class Board:
         """Convert 0-based index to hex coordinate."""
         return self.reverse_hex_map[index]
     
-    def make_move(self, row: int, col: int) -> bool:
+    def make_move(self, row: int, col: int, player: Optional[Player] = None) -> bool:
         """Make a move on the board. Returns True if move is valid."""
         if not self.is_valid_move(row, col):
             return False
             
-        # Record the move with current player
-        self.board[row][col] = self.current_player.type.value
-        self.move_history.append((row, col, self.current_player))
+        # Use provided player or current player
+        player_to_use = player if player is not None else self.current_player
+            
+        # Record the move with the player
+        self.board[row][col] = player_to_use.type.value
+        self.move_history.append((row, col, player_to_use))
         
         # Switch player after recording the move
         self.current_player = self.current_player.get_opponent()

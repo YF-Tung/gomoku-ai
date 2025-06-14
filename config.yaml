@@ -10,9 +10,12 @@ ai:
   # Starting search depth
   start_depth: 2
   # Time limit per move in seconds
-  time_limit: 2.0
+  time_limit: 10.0
   # Maximum depth to search (safety limit)
   max_search_depth: 10
+  # Score threshold for early cutoff (winning/losing)
+  win_score_threshold: 100000
+  lose_score_threshold: -100000
 
 # Board configuration
 board:

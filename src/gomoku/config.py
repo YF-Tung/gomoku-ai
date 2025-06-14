@@ -53,5 +53,13 @@ class Config:
         """Get the number of pieces in a row needed to win."""
         return self._config['board']['win_length']
 
+    @property
+    def win_score_threshold(self) -> int:
+        return self._config['ai'].get('win_score_threshold', 100000)
+
+    @property
+    def lose_score_threshold(self) -> int:
+        return self._config['ai'].get('lose_score_threshold', -100000)
+
 # Create a global config instance
 config = Config() 
