@@ -1,22 +1,33 @@
 from typing import Optional, Tuple
 import time
 from ..board.board import Board
-from ..board.player import Player, PlayerType
+from ..board.player import PlayerType
 from ..ai.player import AIPlayer
 from ..utils.formatter import BoardFormatter
 from .time_manager import TimeManager
+from src.gomoku.config import config
 
 
 class Game:
-    def __init__(self, ai_depth: int = 3, time_limit: int = 300):  # 300 seconds = 5 minutes
+    def __init__(self):
+        """Initialize a new game with settings from config."""
         self.board = Board()
-        self.human_player = Player(PlayerType.BLACK)
-        self.ai_player = Player(PlayerType.WHITE)
-        self.ai = AIPlayer(self.board, depth=ai_depth)
+        self.human_player = PlayerType.BLACK
+        self.ai_player = PlayerType.WHITE
         self.current_player = self.human_player
         self.game_over = False
         self.winner = None
-        self.time_manager = TimeManager(time_limit)
+        
+        # Initialize AI with config values
+        self.ai = AIPlayer(
+            self.board,
+            depth=config.ai_max_depth,
+            time_limit=config.ai_time_limit
+        )
+        
+        # Initialize time manager with config value
+        self.time_manager = TimeManager(config.game_time_limit)
+        
         self.formatter = BoardFormatter(self.board)
     
     def get_time_remaining(self, player_type: PlayerType) -> int:
@@ -36,34 +47,36 @@ class Game:
         if not self.board.is_valid_move(row, col):
             return False, "Invalid move"
             
-        # Make the move
+        # Make the human move
         if not self.board.make_move(row, col):
             return False, "Invalid move"
         
-        # Check for win
+        # Check for human win
         if self.board.check_win(row, col):
             self.game_over = True
             self.winner = self.human_player
             return True, None
             
-        # Switch to AI's turn and update time for human player
-        self.current_player = self.ai_player
-        self.time_manager.switch_player(PlayerType.WHITE)
-        
-        # AI makes move
-        ai_row, ai_col = self.ai.make_move()
-        if not self.board.make_move(ai_row, ai_col):
-            return False, "AI made an invalid move"
-        
-        # Check for AI win
-        if self.board.check_win(ai_row, ai_col):
-            self.game_over = True
-            self.winner = self.ai_player
-            return True, None
+        # Only proceed with AI move if game is not over
+        if not self.game_over:
+            # Switch to AI's turn and update time for human player
+            self.current_player = self.ai_player
+            self.time_manager.switch_player(PlayerType.WHITE)
             
-        # Switch back to human's turn and update time for AI
-        self.current_player = self.human_player
-        self.time_manager.switch_player(PlayerType.BLACK)
+            # AI makes move
+            ai_row, ai_col = self.ai.make_move()
+            if not self.board.make_move(ai_row, ai_col):
+                return False, "AI made an invalid move"
+            
+            # Check for AI win
+            if self.board.check_win(ai_row, ai_col):
+                self.game_over = True
+                self.winner = self.ai_player
+                return True, None
+                
+            # Switch back to human's turn and update time for AI
+            self.current_player = self.human_player
+            self.time_manager.switch_player(PlayerType.BLACK)
         
         return True, None
     
@@ -77,9 +90,9 @@ class Game:
             
         return {
             'board': self.board.board.tolist(),  # Convert numpy array to list
-            'current_player': self.current_player.type.value,
+            'current_player': self.current_player.value,
             'game_over': self.game_over,
-            'winner': self.winner.type.value if self.winner else None,
+            'winner': self.winner.value if self.winner else None,
             'time_remaining': self.time_manager.get_time_state(),
             'last_move': last_move
         }

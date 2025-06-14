@@ -1,0 +1,22 @@
+# Game configuration
+game:
+  # Time limit per player in seconds (5 minutes)
+  time_limit: 300
+
+# AI configuration
+ai:
+  # Maximum search depth (higher = stronger but slower)
+  max_depth: 3
+  # Starting search depth
+  start_depth: 2
+  # Time limit per move in seconds
+  time_limit: 2.0
+  # Maximum depth to search (safety limit)
+  max_search_depth: 10
+
+# Board configuration
+board:
+  # Board size (15x15 for standard Gomoku)
+  size: 15
+  # Number of pieces in a row to win
+  win_length: 5 

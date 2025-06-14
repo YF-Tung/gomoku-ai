@@ -15,6 +15,7 @@ class AIPlayer:
         self.evaluator = PositionEvaluator(board)
         self.progress = ProgressTracker()
         self.first_move_made = False
+        self.last_score = None  # Store the last evaluation score
     
     def _get_first_move(self) -> Tuple[int, int]:
         """Get the optimal first move for white."""
@@ -24,7 +25,9 @@ class AIPlayer:
         for dr, dc in adjacent_moves:
             new_row, new_col = last_row + dr, last_col + dc
             if self.board.is_valid_move(new_row, new_col):
+                self.last_score = None  # No score for first move
                 return new_row, new_col
+        self.last_score = None  # No score for first move
         return 7, 7  # Fallback to center
     
     def _search_with_time_limit(self, start_depth: int = 2) -> Tuple[float, Tuple[int, int]]:
@@ -33,12 +36,12 @@ class AIPlayer:
         best_move = None
         current_depth = start_depth
         start_time = time.time()
-        max_depth = 3  # Cap the maximum search depth
+        max_depth = self.depth  # Use the configured depth
         
         print(f"\nStarting AI search at depth {current_depth}...")
         
-        while time.time() - start_time < self.time_limit and current_depth <= max_depth:
-            print(f"\nTrying depth {current_depth}...")
+        # First try to get at least one move at minimum depth
+        try:
             search = MinimaxSearch(
                 self.board,
                 lambda: self.evaluator.evaluate(),
@@ -52,7 +55,36 @@ class AIPlayer:
             
             search.evaluator = evaluator_with_progress
             
+            score, move = search.search()
+            if move:  # Only update if we found a valid move
+                best_score = score
+                best_move = move
+                print(f"✓ Initial depth {current_depth} completed:")
+                print(f"  - Best move: {move}")
+                print(f"  - Score: {score}")
+                print(f"  - Time used: {time.time() - start_time:.2f}s")
+        except Exception as e:
+            print(f"× Error at initial depth {current_depth}: {str(e)}")
+            # If we can't even complete the initial depth, use a random valid move
+            valid_moves = self.board.get_valid_moves()
+            if valid_moves:
+                best_move = valid_moves[0]
+                print(f"Using fallback move: {best_move}")
+            return 0, best_move
+        
+        # Now try deeper searches if we have time
+        while time.time() - start_time < self.time_limit and current_depth < max_depth:
+            current_depth += 1
+            print(f"\nTrying depth {current_depth}...")
+            
             try:
+                search = MinimaxSearch(
+                    self.board,
+                    lambda: self.evaluator.evaluate(),
+                    current_depth
+                )
+                search.evaluator = evaluator_with_progress
+                
                 score, move = search.search()
                 if move:  # Only update if we found a valid move
                     best_score = score
@@ -62,30 +94,26 @@ class AIPlayer:
                     print(f"  - Score: {score}")
                     print(f"  - Time used: {time.time() - start_time:.2f}s")
                     
-                    if current_depth == max_depth:
-                        print(f"\nReached maximum depth {max_depth}, stopping search.")
-                        break
-                        
                     # Check if we have time for next depth
                     time_left = self.time_limit - (time.time() - start_time)
                     if time_left < 2.0:  # Less than 2 seconds left
                         print(f"\nNot enough time ({time_left:.2f}s) for depth {current_depth + 1}, stopping search.")
                         break
                     print(f"\nTime remaining: {time_left:.2f}s, attempting depth {current_depth + 1}...")
-            except TimeoutError:
-                print(f"× Timeout at depth {current_depth}")
+            except Exception as e:
+                print(f"× Error at depth {current_depth}: {str(e)}")
                 break
-                
-            current_depth += 1
             
         if best_move:
             print(f"\nFinal decision:")
             print(f"- Best move: {best_move}")
             print(f"- Score: {best_score}")
-            print(f"- Search depth: {current_depth - 1}")
+            print(f"- Search depth: {current_depth}")
             print(f"- Total time: {time.time() - start_time:.2f}s")
         else:
             print("\nWARNING: No valid move found!")
+            # Fallback to center if no move found
+            best_move = (7, 7)
             
         return best_score, best_move
     
@@ -107,9 +135,11 @@ class AIPlayer:
         
         if best_move:
             print(f"AI chose move: {best_move} with score: {score}")
+            self.last_score = score  # Store the score
         else:
             print("WARNING: No best move found, using center as fallback")
             best_move = (7, 7)
+            self.last_score = None
         
         # Print final result
         print(self.progress.finish(best_move))

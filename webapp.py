@@ -3,9 +3,15 @@ from src.gomoku.game.game import Game
 import webbrowser
 import threading
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+# Reduce Flask's logging level to WARNING to hide request logs
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 app = Flask(__name__, static_folder='static')
-game = Game(ai_depth=3, time_limit=300)  # 5 minutes per player
+game = Game()  # Initialize with default config values
 
 @app.route('/')
 def index():
@@ -36,12 +42,12 @@ def make_move():
     
     return jsonify({
         'board': game.board.board.tolist(),
-        'current_player': game.current_player.type.value,
+        'current_player': game.current_player.value,
         'game_over': game.game_over,
-        'winner': game.winner.type.value if game.winner else None,
+        'winner': game.winner.value if game.winner else None,
         'time_remaining': {
-            'black': game.get_time_remaining(game.human_player.type),
-            'white': game.get_time_remaining(game.ai_player.type)
+            'black': game.get_time_remaining(game.human_player),
+            'white': game.get_time_remaining(game.ai_player)
         },
         'last_move': last_move,
         'ai_score': game.ai.last_score if hasattr(game.ai, 'last_score') else None
@@ -54,7 +60,7 @@ def game_state():
 @app.route('/restart', methods=['POST'])
 def restart():
     global game
-    game = Game(ai_depth=3, time_limit=300)
+    game = Game()  # Initialize with default config values
     return jsonify(game.get_game_state())
 
 def open_browser():
