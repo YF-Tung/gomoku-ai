@@ -58,17 +58,26 @@ function updateLastMove(moveInfo) {
 }
 
 function makeMove(row, col) {
+    console.log('Making move at:', row, col);  // Debug log
+    
     // Optimistic UI: Update the board immediately with player's move
     const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-    const originalContent = cell.innerHTML;  // Save original state
-    cell.innerHTML = '<div class="piece black"></div>';
+    const piece = cell.querySelector('.piece');
+    if (!piece) {
+        console.error('Piece element not found in clicked cell');
+        return;
+    }
+    
+    // Save original state
+    const originalDisplay = piece.style.display;
+    const originalClass = piece.className;
+    
+    // Update piece
+    piece.className = 'piece black';
+    piece.style.display = 'block';
     
     // Disable all cells while AI is thinking
     document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'none');
-    
-    // Show thinking indicator
-    const thinking = document.getElementById('thinking');
-    thinking.classList.add('active');
     
     fetch('/make_move', {
         method: 'POST',
@@ -84,9 +93,12 @@ function makeMove(row, col) {
         return response.json();
     })
     .then(data => {
+        console.log('Server response:', data);  // Debug log
+        
         if (data.error) {
             // Revert the optimistic update
-            cell.innerHTML = originalContent;
+            piece.style.display = originalDisplay;
+            piece.className = originalClass;
             alert(data.error);
             // Re-enable cells
             document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
@@ -94,7 +106,12 @@ function makeMove(row, col) {
         }
         
         // Server confirmed the move, update with both moves
-        updateBoard(data.board);
+        if (!data.board) {
+            console.error('Invalid server response - missing board:', data);
+            return;
+        }
+        
+        updateBoard(data);
         updateStatus(data);
         if (data.last_move) {
             updateLastMove(data.last_move);
@@ -113,41 +130,104 @@ function makeMove(row, col) {
     .catch(error => {
         console.error('Error:', error);
         // Revert the optimistic update
-        cell.innerHTML = originalContent;
+        piece.style.display = originalDisplay;
+        piece.className = originalClass;
         alert('Error making move. Please try again.');
         // Re-enable cells
         document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'auto');
-    })
-    .finally(() => {
-        // Hide thinking indicator
-        thinking.classList.remove('active');
     });
 }
 
-function updateBoard(board) {
-    const rows = document.querySelectorAll('.row');
-    rows.forEach((row, rowIndex) => {
-        const cells = row.querySelectorAll('.cell');
-        cells.forEach((cell, colIndex) => {
-            const value = board[rowIndex][colIndex];
-            
-            // Clear existing pieces
-            const existingPiece = cell.querySelector('.piece');
-            if (existingPiece) {
-                existingPiece.remove();
+function updateBoard(data) {
+    console.log('Received data in updateBoard:', data);  // Debug log
+    
+    // Remove last-move class from all cells
+    document.querySelectorAll('.cell.last-move').forEach(cell => {
+        cell.classList.remove('last-move');
+    });
+    
+    // Check if we have valid board data
+    if (!data || !data.board || !Array.isArray(data.board)) {
+        console.error('Invalid board data received:', data);
+        return;
+    }
+    
+    // Update board state
+    for (let i = 0; i < 15; i++) {
+        for (let j = 0; j < 15; j++) {
+            const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+            if (!cell) {
+                console.error(`Cell not found for position (${i}, ${j})`);
+                continue;
             }
             
-            // Add new piece if needed
-            if (value === 1) {
-                const piece = document.createElement('div');
+            const piece = cell.querySelector('.piece');
+            if (!piece) {
+                console.error(`Piece element not found in cell (${i}, ${j})`);
+                continue;
+            }
+            
+            // Update piece display and class
+            if (data.board[i][j] === 1) {
                 piece.className = 'piece black';
-                cell.appendChild(piece);
-            } else if (value === 2) {
-                const piece = document.createElement('div');
+                piece.style.display = 'block';
+            } else if (data.board[i][j] === 2) {
                 piece.className = 'piece white';
-                cell.appendChild(piece);
+                piece.style.display = 'block';
+            } else {
+                piece.className = 'piece';
+                piece.style.display = 'none';
             }
-        });
+        }
+    }
+    
+    // Highlight last move if available
+    if (data.last_move) {
+        const [row, col] = data.last_move;
+        const lastMoveCell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        if (lastMoveCell) {
+            lastMoveCell.classList.add('last-move');
+        }
+    }
+    
+    // Update status
+    updateStatus(data);
+}
+
+function calculateWinningProbability(score) {
+    // Convert score to a probability between 0 and 1 using sigmoid
+    // This maps any score to a probability where:
+    // - Very negative scores -> close to 0% (Black winning)
+    // - Very positive scores -> close to 100% (White winning)
+    // - Score of 0 -> 50% (equal position)
+    const maxScore = 1000; // Reduced from 100000 to make changes more visible
+    const probability = 1 / (1 + Math.exp(-score / maxScore));
+    return probability;
+}
+
+function updateEvaluationBar(score) {
+    const whiteFill = document.querySelector('.evaluation-fill.white');
+    const blackFill = document.querySelector('.evaluation-fill.black');
+    
+    // Calculate winning probability for White
+    const whiteProbability = calculateWinningProbability(score);
+    const blackProbability = 1 - whiteProbability;
+    
+    // Ensure each side has at least 1% width
+    const minWidth = 0.01; // 1%
+    const adjustedWhiteProb = Math.max(minWidth, Math.min(1 - minWidth, whiteProbability));
+    const adjustedBlackProb = Math.max(minWidth, Math.min(1 - minWidth, blackProbability));
+    
+    // Update the fills - each side grows from the center
+    whiteFill.style.width = `${adjustedWhiteProb * 50}%`;  // Max 50% from center
+    blackFill.style.width = `${adjustedBlackProb * 50}%`;  // Max 50% from center
+    
+    console.log('Evaluation bar update:', { 
+        score,
+        whiteProbability: whiteProbability * 100,
+        blackProbability: blackProbability * 100,
+        whiteWidth: whiteFill.style.width, 
+        blackWidth: blackFill.style.width 
     });
 }
 
@@ -157,9 +237,17 @@ function updateStatus(data) {
     
     if (data.game_over) {
         status.textContent = data.winner === 'B' ? 'Game Over - You won!' : 'Game Over - AI won!';
+        status.classList.add('game-over');
         aiScore.textContent = '';  // Clear score when game is over
+        // Reset evaluation bar
+        updateEvaluationBar(0);
     } else {
-        status.textContent = data.current_player === 1 ? 'Your turn (Black)' : 'AI is thinking...';
+        status.classList.remove('game-over');
+        if (data.current_player === 1) {
+            status.textContent = 'Your turn (Black)';
+        } else {
+            status.textContent = 'AI is thinking...';
+        }
         
         // Update AI score if available
         if (data.ai_score !== null && data.ai_score !== undefined) {
@@ -180,8 +268,13 @@ function updateStatus(data) {
             
             const advantage = score > 0 ? 'White' : 'Black';
             aiScore.textContent = `Position Evaluation: ${score.toFixed(0)} (${advantage}${interpretation})`;
+            
+            // Update evaluation bar
+            updateEvaluationBar(score);
         } else {
             aiScore.textContent = '';
+            // Reset evaluation bar
+            updateEvaluationBar(0);
         }
     }
 }
