@@ -77,7 +77,7 @@ class Game:
         last_move = None
         if self.board.move_history:
             last_row, last_col, player = self.board.move_history[-1]
-            last_move = f"{self.board.format_coordinate(last_row)}{self.board.format_coordinate(last_col)} ({player.type.value})"
+            last_move = f"({self.board.format_coordinate(last_row)}, {self.board.format_coordinate(last_col)}) ({player.type.value})"
             
         return {
             'board': self.board.board.tolist(),  # Convert numpy array to list
