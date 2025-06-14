@@ -95,10 +95,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background-color 0.3s ease;
         }
         .player-time.active {
-            background-color: #e0e0ff;
-            box-shadow: 0 0 10px rgba(0, 0, 255, 0.2);
+            background-color: #d4edda;  /* Slightly more noticeable light green */
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);  /* Stronger green shadow */
         }
         .player-time.low {
             color: red;
@@ -170,6 +171,7 @@
             fetch('/game_state')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Game state:', data);  // Debug log
                     const blackTime = document.getElementById('blackTime');
                     const whiteTime = document.getElementById('whiteTime');
                     const blackDisplay = blackTime.querySelector('.time-display');
@@ -178,9 +180,22 @@
                     blackDisplay.textContent = formatTime(data.time_remaining.black);
                     whiteDisplay.textContent = formatTime(data.time_remaining.white);
                     
-                    // Update active player
-                    blackTime.classList.toggle('active', data.current_player === 'B');
-                    whiteTime.classList.toggle('active', data.current_player === 'W');
+                    // Debug log current classes
+                    console.log('Before update - Black active:', blackTime.classList.contains('active'));
+                    console.log('Before update - White active:', whiteTime.classList.contains('active'));
+                    
+                    // Update active player - remove both classes first, then add to current
+                    blackTime.classList.remove('active');
+                    whiteTime.classList.remove('active');
+                    if (data.current_player === 1) {  // 1 = BLACK
+                        blackTime.classList.add('active');
+                    } else if (data.current_player === 2) {  // 2 = WHITE
+                        whiteTime.classList.add('active');
+                    }
+                    
+                    // Debug log after update
+                    console.log('After update - Black active:', blackTime.classList.contains('active'));
+                    console.log('After update - White active:', whiteTime.classList.contains('active'));
                     
                     // Add low time warning
                     blackTime.classList.toggle('low', data.time_remaining.black < 30);

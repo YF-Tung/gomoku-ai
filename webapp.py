@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 from src.gomoku.game.game import Game
 import webbrowser
 import threading
@@ -9,7 +9,11 @@ game = Game(ai_depth=3, time_limit=300)  # 5 minutes per player
 
 @app.route('/')
 def index():
-    return render_template('game.html', board=game.board.board)
+    response = make_response(render_template('game.html', board=game.board.board))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/make_move', methods=['POST'])
 def make_move():
